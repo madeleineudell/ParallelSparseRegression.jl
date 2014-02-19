@@ -1,5 +1,3 @@
-module ADMM
-
 export admm, admm_consensus, Params
 
 type Params
@@ -185,5 +183,3 @@ function admm_consensus(proxs, n; z0 = zeros(n), params=Params())
 
     return z
 end
-
-end # module

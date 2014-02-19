@@ -1,7 +1,6 @@
-require("src/ParallelSparseRegression.jl")
 using ParallelSparseRegression
 
-m,n,p = 20,4,.5
+m,n,p = 100,20,.1
 A = sprand(m,n,p)
 x0 = Base.shmem_randn(n)
 # m,n,p = 6,4,.5
@@ -10,9 +9,9 @@ x0 = Base.shmem_randn(n)
 b = A*x0
 rho = 1
 quiet = false
-maxiters = true
+maxiters = 100
 
-params = Params(rho,quiet,30)
+params = Params(rho,quiet,maxiters)
 z = nnlsq(A,b; params=params)
 
 # compute true solution using cvxpy
