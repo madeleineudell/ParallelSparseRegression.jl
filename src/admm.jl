@@ -166,7 +166,7 @@ function admm_consensus(proxs, n; z0 = zeros(n), params=Params())
         prires = norm(broadcast(-, xs, z));
         duares = rho*norm(z - zprev);
 
-        if ~params.quiet && (iter == 1 || mod(iter,1) == 0)
+        if ~params.quiet && (iter == 1 || mod(iter,10) == 0)
             @printf("%4d :\t%.2e\t%.2e\t%.2e\t%.2e\n", iter, prires, eps_pri, duares, eps_dual);
         end
 

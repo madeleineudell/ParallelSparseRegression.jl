@@ -33,7 +33,7 @@ end
 # as a function of z
 # using shared memory to parallelize matrix vector products
 function make_prox_lsq(A,b,rho)    
-    C = share(sparse([A, rho*eye(size(A,2))]))
+    C = operator(sparse([A, rho*eye(size(A,2))]))
     function my_prox_lsq(z)
         d = [b, z]
         zp, ch = lsqr(C, d; maxiter = 5)
