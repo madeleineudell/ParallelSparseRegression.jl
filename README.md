@@ -8,7 +8,7 @@ including least squares, ridge regression, lasso, non-negative least squares,
 and elastic net.
 It will also contain fast methods to obtain regularization paths.
 
-Using the (Alternating Direction Method of Multipliers)[http://www.stanford.edu/~boyd/papers/pdf/admm_distr_stats.pdf],
+Using the [Alternating Direction Method of Multipliers](http://www.stanford.edu/~boyd/papers/pdf/admm_distr_stats.pdf),
 all of these problems can be reduced to computing the prox of each term in the objective.
 We rely on the fact that the prox of each term in the objective
 of these regression problems can be efficiently computed in parallel.
