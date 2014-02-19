@@ -1,5 +1,7 @@
 module ParallelSparseRegression
 
-# package code goes here
+include("admm.jl")
+include("prox.jl")
+include("regression.jl")
 
 end # module
