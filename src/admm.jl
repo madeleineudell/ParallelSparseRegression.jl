@@ -159,13 +159,12 @@ function admm_consensus(proxs, n; z0 = SharedArray(Float64,n), params=Params())
             proxs[i](xs[i])
         end
 
-        println(xs)
-        zprev, z.s = z, vec(mean(xs+ys,2))
+        zprev, z.s = z, mean(xs)+mean(ys)
 
-        # termination checks
-        eps_pri  = sqrtn*params.ABSTOL + params.RELTOL*max(norm(xs), norm(z));
-        eps_dual = sqrtn*params.ABSTOL + params.RELTOL*norm(rho*ys);
-        prires = norm(broadcast(-, xs, z));
+        # termination checks --- not great currently
+        eps_pri  = sqrtn*params.ABSTOL + params.RELTOL*max(norm(mean(xs)), norm(z));
+        eps_dual = sqrtn*params.ABSTOL + params.RELTOL*norm(rho*mean(ys));
+        prires = sum([norm(x-z) for x in xs]);
         duares = rho*norm(z - zprev);
 
         if ~params.quiet && (iter == 1 || mod(iter,10) == 0)
@@ -181,7 +180,7 @@ function admm_consensus(proxs, n; z0 = SharedArray(Float64,n), params=Params())
         end
 
         for i=1:m
-            ys.s[i] = ys[i] + xs[i] - z
+            ys[i].s = ys[i] + xs[i] - z
         end 
     end
 
