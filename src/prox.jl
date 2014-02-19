@@ -31,9 +31,17 @@ end
 # return a function my_prox_lsq that computes the solution to 
 # minimize \|Ax - b\|_2^2 + \rho/2 \|x-z\|_2^2
 # as a function of z
-# using shared memory to parallelize matrix vector products
-function make_prox_lsq(A,b,rho)    
-    C = operator(sparse([A, rho*eye(size(A,2))]))
+function make_prox_lsq(A,b,rho; memory=:shared)    
+    C = sparse([A, rho*eye(size(A,2))])
+    if memory == :shared
+        C = operator(C)
+    elseif memory == :distributed
+        error("Distributed memory least squares is not yet implemented")
+    elseif memory == :local
+        C = C
+    else
+        error("$memory memory is not implemented. Try using memory=:shared or memory=:local.")
+    end
     function my_prox_lsq(z)
         d = [b, z]
         zp, ch = lsqr(C, d; maxiter = 5)

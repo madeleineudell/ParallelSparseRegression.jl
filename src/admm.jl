@@ -126,7 +126,6 @@ function project_graph(v, A, AA=[], F = nothing)
 
 end
 
-# XXX this computes the wrong thing, probably
 function admm_consensus(proxs, n; z0 = zeros(n), params=Params())
 # Generic consensus solver. Solve
 #
