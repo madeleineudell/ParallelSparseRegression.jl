@@ -3,10 +3,10 @@
 [![Build Status](https://travis-ci.org/madeleineudell/ParallelSparseRegression.jl.png)](https://travis-ci.org/madeleineudell/ParallelSparseRegression.jl)
 
 A Julia library for parallel sparse regression using shared memory.
-This library intends to implement solvers for regression problems
+This library implements solvers for regression problems
 including least squares, ridge regression, lasso, non-negative least squares,
 and elastic net.
-It will also contain fast methods to obtain regularization paths.
+It also proposes to add fast methods to obtain regularization paths.
 
 Using the [Alternating Direction Method of Multipliers](http://www.stanford.edu/~boyd/papers/pdf/admm_distr_stats.pdf),
 all of these problems can be reduced to computing the prox of each term in the objective.
