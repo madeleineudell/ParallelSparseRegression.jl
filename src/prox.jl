@@ -5,6 +5,12 @@ function prox_pos(z)
     max(z,0)
 end
 
+function prox_pos(z::SharedArray)
+    @parallel for i=1:length(z)
+        z[i] = max(z[i],0)
+    end
+end
+
 ### The make_prox_* arguments close over rho; the user can change rho when creating the proxs, but not at runtime during the ADMM iterations
 
 # return a function my_prox_l1 that computes the solution to 
@@ -42,9 +48,8 @@ function make_prox_lsq(A,b,rho; memory=:shared)
     else
         error("$memory memory is not implemented. Try using memory=:shared or memory=:local.")
     end
-    function my_prox_lsq(z)
+    function my_prox_lsq(z::SharedArray)
         d = [b, z]
-        zp, ch = lsqr(C, d; maxiter = 5)
-        return zp
+        lsqr!(z, C, d; maxiter = 5)
     end
 end

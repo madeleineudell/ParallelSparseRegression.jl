@@ -126,7 +126,7 @@ function project_graph(v, A, AA=[], F = nothing)
 
 end
 
-function admm_consensus(proxs, n; z0 = zeros(n), params=Params())
+function admm_consensus(proxs, n; z0 = SharedArray(Float64,n), params=Params())
 # Generic consensus solver. Solve
 #
 #  minimize   f_1(x_1) + ... + f_m(x_m)
@@ -142,8 +142,8 @@ function admm_consensus(proxs, n; z0 = zeros(n), params=Params())
 
     m = length(proxs)
     sqrtm = sqrt(m)
-    xs = zeros(n,m) 
-    ys = zeros(n,m)
+    xs = [SharedArray(Float64,n) for i=1:m] 
+    ys = [SharedArray(Float64,n) for i=1:m] 
     z  = z0
 
     sqrtn = sqrt(n);
@@ -154,10 +154,13 @@ function admm_consensus(proxs, n; z0 = zeros(n), params=Params())
 
     for iter = 1:params.maxiters
         for i=1:m
-            xs[:,i] = proxs[i](z - ys[:,i])
+            #xs[:,i] = proxs[i](z - ys[:,i])
+            xs[i].s = z - ys[i]
+            proxs[i](xs[i])
         end
 
-        zprev, z = z, vec(mean(xs+ys,2))
+        println(xs)
+        zprev, z.s = z, vec(mean(xs+ys,2))
 
         # termination checks
         eps_pri  = sqrtn*params.ABSTOL + params.RELTOL*max(norm(xs), norm(z));
@@ -177,7 +180,9 @@ function admm_consensus(proxs, n; z0 = zeros(n), params=Params())
             end
         end
 
-        ys = broadcast(-, ys + xs, z) 
+        for i=1:m
+            ys.s[i] = ys[i] + xs[i] - z
+        end 
     end
 
     return z
