@@ -1,8 +1,7 @@
-addprocs(int(ARGS[1]))
 using ParallelSparseRegression
 
 function speed_test(memory=:shared)
-	m,n,p = 10,5,.5
+	m,n,p = 1000,1000,.1
 	A = sprand(m,n,p)
 	x0 = Base.shmem_randn(n)
 	b = A*x0
@@ -25,11 +24,6 @@ end
 
 
 println("Speed test using $(nprocs()) processors")
-if length(ARGS)>1 && ARGS[2] == "local"
-	memory=:local
-elseif ARGS[2] == "shared"
-	memory=:shared
-end
-speed_test(memory)
+speed_test()
 
  

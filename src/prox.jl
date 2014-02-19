@@ -1,12 +1,14 @@
-export prox_pos, make_prox_l1, make_prox_l2, make_prox_lsq
+export prox_pos!, make_prox_l1, make_prox_l2, make_prox_lsq
 
 # the prox of the indicator of the positive orthant is thresholding negative values to 0.
-function prox_pos(z)
-    max(z,0)
-end
+# function prox_pos!(z::SharedArray)
+#     @parallel for i=1:length(z)
+#         z[i] = max(z[i],0)
+#     end
+# end
 
-function prox_pos(z::SharedArray)
-    @parallel for i=1:length(z)
+function prox_pos!(z::SharedArray)
+    for i=1:length(z)
         z[i] = max(z[i],0)
     end
 end
@@ -19,8 +21,10 @@ end
 # the solution is just soft thresholding
 function make_prox_l1(lambda, rho)
     delta = rho/lambda
-    function my_prox_l1(z)
-        max(z - delta,0)
+    function my_prox_l1!(z)
+        @parallel for i=1:length(z)
+            z[i] = max(z[i]-delta,0)
+        end
     end
 end
 
@@ -29,8 +33,10 @@ end
 # as a function of z
 function make_prox_l2(lambda, rho)
     alpha = rho/(rho+lambda)
-    function my_prox_l2(z)
-        alpha*z
+    function my_prox_l2!(z)
+        @parallel for i=1:length(z)
+            z[i] *= alpha
+        end
     end
 end
 
@@ -39,17 +45,27 @@ end
 # as a function of z
 function make_prox_lsq(A,b,rho; memory=:shared)    
     C = sparse([A, rho*eye(size(A,2))])
+    T = Adivtype(A,b)
+    m,n = size(C)
     if memory == :shared
         C = operator(C)
+        temp_vars = SharedArray(T,m),SharedArray(T,n),SharedArray(T,m),SharedArray(T,n)
+        d = SharedArray(T,m)
     elseif memory == :distributed
         error("Distributed memory least squares is not yet implemented")
     elseif memory == :local
         C = C
-    else
+        temp_vars = Array(T,m),Array(T,n),Array(T,m),Array(T,n)
+        d = Array(T,m)
+        else
         error("$memory memory is not implemented. Try using memory=:shared or memory=:local.")
     end
-    function my_prox_lsq(z::SharedArray)
-        d = [b, z]
-        lsqr!(z, C, d; maxiter = 5)
+    m1 = length(b)
+    d[1:m1] = b
+    function my_prox_lsq!(z::SharedArray)
+        for i=n
+            d[m1+i] = z[i]
+        end
+        lsqr!(z, C, d; temp_vars=temp_vars, maxiter=5)
     end
 end

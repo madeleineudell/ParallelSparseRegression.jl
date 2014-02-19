@@ -1,7 +1,8 @@
 using ParallelSparseRegression
+import ParallelSparseMatMul.operator
 
 m,n,p = 100,20,.1
-A = sprand(m,n,p)
+A = operator(sprand(m,n,p))
 x0 = Base.shmem_randn(n)
 b = A*x0
 rho = 1

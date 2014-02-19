@@ -1,6 +1,6 @@
 module ParallelSparseRegression
 
-import IterativeSolvers: lsqr, lsqr!
+import IterativeSolvers: lsqr!, Adivtype
 using ParallelSparseMatMul
 
 include("admm.jl")
