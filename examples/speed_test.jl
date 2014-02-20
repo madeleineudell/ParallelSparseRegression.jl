@@ -1,14 +1,14 @@
 using ParallelSparseRegression
 
 function speed_test(memory=:shared)
-	m,n,p = 1000,1000,.1
+	m,n,p = 100000,100000,.0001
 	A = sprand(m,n,p)
 	x0 = Base.shmem_randn(n)
 	b = A*x0
 	rho = 1
 	lambda = 1
 	quiet = false
-	maxiters = 100
+	maxiters = 20
 	params = Params(rho,quiet,maxiters)
 	println("Making proxs")
 	@time proxs = [make_prox_l1(lambda, params.rho),make_prox_lsq(A, b, params.rho; memory=memory)]
@@ -22,8 +22,3 @@ function speed_test(memory=:shared)
 	@time admm_consensus(proxs,size(A,2); params=params)
 end
 
-
-println("Speed test using $(nprocs()) processors")
-speed_test()
-
- 
