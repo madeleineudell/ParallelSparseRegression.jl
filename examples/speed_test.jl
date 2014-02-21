@@ -7,11 +7,9 @@ function speed_test(memory=:shared)
 	b = A*x0
 	rho = 1
 	lambda = 1
-	quiet = false
-	maxiters = 20
-	params = Params(rho,quiet,maxiters)
+	params = ((:rho, rho), (:quiet, false), (:maxiters, 20))
 	println("Making proxs")
-	@time proxs = [make_prox_l1(lambda, params.rho),make_prox_lsq(A, b, params.rho; memory=memory)]
+	@time proxs = [make_prox_l1(lambda, rho),make_prox_lsq(A, b, rho; memory=memory)]
 	# println("Evaluate each prox 5 times")
 	# x0.s += .1*randn(n)
 	# for prox in proxs
@@ -19,6 +17,6 @@ function speed_test(memory=:shared)
 	# 		prox(x0)
 	# 	end end
 	# end
-	@time admm_consensus(proxs,size(A,2); params=params)
+	@time admm_consensus(proxs,size(A,2); params...)
 end
 

@@ -1,17 +1,6 @@
-export admm, admm_consensus, Params
+export admm, admm_consensus
 
-type Params
-    rho::Float64
-    quiet::Bool
-    ABSTOL::Float64
-    RELTOL::Float64
-    maxiters::Int
-end
-Params() = Params(1,false,1e-4,1e-2,1000)
-Params(rho,quiet) = Params(rho,quiet,1e-4,1e-2,1000)
-Params(rho,quiet,maxiters) = Params(rho,quiet,1e-4,1e-2,maxiters)
-
-function admm(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
+function admm(prox_f, prox_g, A; rho=1, quiet=false, ABSTOL=1e-4, RELTOL=1e-2, maxiters=1000, AA=nothing, F=nothing)
 # Generic graph projection splitting solver. Solve
 #
 #  minimize   f(y) + g(x)
@@ -26,8 +15,6 @@ function admm(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
 #                   If A is dense, F is a factorization of eye(n) + AA;
 
     tic();
-
-    rho = params.rho;
 
     m, n = size(A);
     xx = zeros(n,1);   xz = zeros(n,1);   xt = zeros(n,1);
@@ -44,7 +31,7 @@ function admm(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
 
     sqrtn = sqrt(n);
 
-    if ~params.quiet
+    if ~quiet
         @printf("iter :\t%8s\t%8s\t%8s\t%8s\n", "r", "eps_pri", "s", "eps_dual");
     end
 
@@ -62,17 +49,17 @@ function admm(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
         xz, yz = zz[1:n], zz[n+1:end]
 
         # termination checks
-        eps_pri  = sqrtn*params.ABSTOL + params.RELTOL*max(norm(zx), norm(zz));
-        eps_dual = sqrtn*params.ABSTOL + params.RELTOL*norm(rho*zt);
+        eps_pri  = sqrtn*ABSTOL + RELTOL*max(norm(zx), norm(zz));
+        eps_dual = sqrtn*ABSTOL + RELTOL*norm(rho*zt);
         prires = norm(zx - zz);
         duares = rho*norm(zz - zzprev);
 
-        if ~params.quiet && (iter == 1 || mod(iter,10) == 0)
+        if ~quiet && (iter == 1 || mod(iter,10) == 0)
             @printf("%4d :\t%.2e\t%.2e\t%.2e\t%.2e\n", iter, prires, eps_pri, duares, eps_dual);
         end
 
         if iter > 2 && prires < eps_pri && duares < eps_dual
-            if ~params.quiet
+            if ~quiet
                 @printf("total iterations: %d\n", iter);
                 toc()
             break;
@@ -126,7 +113,7 @@ function project_graph(v, A, AA=[], F = nothing)
 
 end
 
-function admm_consensus(proxs, n; z = nothing, params=Params())
+function admm_consensus(proxs, n; rho=1, quiet=false, ABSTOL=1e-4, RELTOL=1e-2, maxiters=1000, AA=nothing, F=nothing, z= nothing)
 # Generic consensus solver. Solve
 #
 #  minimize   f_1(x_1) + ... + f_m(x_m)
@@ -137,8 +124,6 @@ function admm_consensus(proxs, n; z = nothing, params=Params())
 #  here we may parallelize inside the proxs, but don't compute the proxs in parallel
 
     tic();
-
-    rho = params.rho;
 
     m = length(proxs)
     sqrtm = sqrt(m)
@@ -154,11 +139,11 @@ function admm_consensus(proxs, n; z = nothing, params=Params())
 
     sqrtn = sqrt(n);
 
-    if ~params.quiet
+    if ~quiet
         @printf("iter :\t%8s\t%8s\t%8s\t%8s\n", "r", "eps_pri", "s", "eps_dual");
     end
 
-    for iter = 1:params.maxiters
+    for iter = 1:maxiters
         for i=1:m
             xs[i][:] = z - ys[i]
             proxs[i](xs[i])
@@ -168,17 +153,17 @@ function admm_consensus(proxs, n; z = nothing, params=Params())
         z[:] = mean(xs)+mean(ys)
 
         # termination checks
-        eps_pri  = sqrtn*params.ABSTOL + params.RELTOL*max(sum([norm(x) for x in xs]), norm(z));
-        eps_dual = sqrtn*params.ABSTOL + params.RELTOL*rho*sum([norm(y) for y in ys]);
+        eps_pri  = sqrtn*ABSTOL + RELTOL*max(sum([norm(x) for x in xs]), norm(z));
+        eps_dual = sqrtn*ABSTOL + RELTOL*rho*sum([norm(y) for y in ys]);
         prires = sum([norm(x-z) for x in xs]);
         duares = rho*norm(z - zprev);
 
-        if ~params.quiet && (iter == 1 || mod(iter,10) == 0)
+        if ~quiet && (iter == 1 || mod(iter,10) == 0)
             @printf("%4d :\t%.2e\t%.2e\t%.2e\t%.2e\n", iter, prires, eps_pri, duares, eps_dual);
         end
 
         if iter > 2 && prires < eps_pri && duares < eps_dual
-            if ~params.quiet
+            if ~quiet
                 @printf("total iterations: %d\n", iter);
                 toc()
             break;
