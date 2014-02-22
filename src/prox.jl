@@ -23,7 +23,7 @@ function make_prox_l1(lambda, rho)
     delta = rho/lambda
     function my_prox_l1!(z)
         @parallel for i=1:length(z)
-            z[i] = max(z[i]-delta,0)
+            z[i] = sign(z[i])*max(abs(z[i]) - delta,0)
         end
     end
 end
