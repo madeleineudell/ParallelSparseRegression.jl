@@ -34,11 +34,8 @@ We will solve a sparse non-negative least squares problem.
     A = sprand(m,n,p)
     x0 = Base.shmem_randn(n)
     b = A*x0
-    rho = 1
-    quiet = false
-    maxiters = 100
 
-    params = Params(rho,quiet,maxiters)
+    params = ((:rho, 1),(:quiet, false), (:maxiters, 100))
     z = nnlsq(A,b; params=params)
 
 We can verify the solution obtained is better than merely thresholding
