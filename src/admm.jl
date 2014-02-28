@@ -1,4 +1,4 @@
-export admm, admm_consensus, Params
+export admm, admm_graph_proj, admm_consensus, Params
 
 type Params
     rho::Float64
@@ -11,7 +11,63 @@ Params() = Params(1,false,1e-4,1e-2,1000)
 Params(rho,quiet) = Params(rho,quiet,1e-4,1e-2,1000)
 Params(rho,quiet,maxiters) = Params(rho,quiet,1e-4,1e-2,maxiters)
 
-function admm(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
+function admm(prox_f, prox_g, A, B, c; params=Params())
+# Generic admm solver in standard form. Solve
+#
+#  minimize   f(x) + g(z)
+#  subject to Ax + Bz = c
+# 
+# given prox_f, prox_g, A, B, and c. 
+#
+# here prox_f(u) computes argmin f(x) + rho/2*\|Ax - u\|_2^2
+#  and prox_g(u) computes argmin g(z) + rho/2*\|Bz - u\|_2^2
+
+    tic();
+
+    rho = params.rho;
+
+    m, mx = size(A);   m, mz = size(B);   m,n = size(c)   
+    z = zeros(mz,n);   y = zeros(m,n);   
+
+    sqrtmn = sqrt(m*n);
+    sqrtmxn = sqrt(mx*n);
+    normc = norm(c)
+
+    if ~params.quiet
+        @printf("iter :\t%8s\t%8s\t%8s\t%8s\n", "r", "eps_pri", "s", "eps_dual");
+    end
+
+    for iter = 1:1000
+        x = prox_f(c-B*z-y)
+        z, zprev = prox_g(c-A*x-y), z
+
+        # termination checks
+        Ax = A*x; Bz = B*z
+        prires = Ax+Bz-c
+        eps_pri  = sqrtmn*params.ABSTOL + params.RELTOL*max(norm(Ax),norm(Bz),normc);
+        eps_dual = sqrtmxn*params.ABSTOL + params.RELTOL*rho*norm(A'*y);
+        norm_prires = norm(resid);
+        norm_duares = rho*norm(A'*(B*(z - zprev)));
+
+        if ~params.quiet && (iter == 1 || mod(iter,10) == 0)
+            @printf("%4d :\t%.2e\t%.2e\t%.2e\t%.2e\n", iter, norm_prires, eps_pri, norm_duares, eps_dual);
+        end
+
+        if iter > 2 && norm_prires < eps_pri && norm_duares < eps_dual
+            if ~params.quiet
+                @printf("total iterations: %d\n", iter);
+                toc()
+            break;
+            end
+        end
+
+        y += resid
+    end
+
+    return x,z
+end
+
+function admm_graph_proj(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
 # Generic graph projection splitting solver. Solve
 #
 #  minimize   f(y) + g(x)
