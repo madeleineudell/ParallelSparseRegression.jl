@@ -138,7 +138,7 @@ function project_graph(v, A, AA=[], F = nothing)
 
 end
 
-function admm_consensus(proxs, n; z0 = SharedArray(Float64,n), params=Params())
+function admm_consensus(proxs, n; z = nothing, params=Params())
 # Generic consensus solver. Solve
 #
 #  minimize   f_1(x_1) + ... + f_m(x_m)
@@ -154,9 +154,15 @@ function admm_consensus(proxs, n; z0 = SharedArray(Float64,n), params=Params())
 
     m = length(proxs)
     sqrtm = sqrt(m)
-    xs = [SharedArray(Float64,n) for i=1:m] 
-    ys = [SharedArray(Float64,n) for i=1:m] 
-    z  = z0
+    if z == nothing
+        T = Float64
+        z = SharedArray(T,n)    
+    else
+        T = eltype(z)
+    end
+    xs = [SharedArray(T,n) for i=1:m] 
+    ys = [SharedArray(T,n) for i=1:m] 
+    zprev = copy(z)
 
     sqrtn = sqrt(n);
 
@@ -166,16 +172,16 @@ function admm_consensus(proxs, n; z0 = SharedArray(Float64,n), params=Params())
 
     for iter = 1:params.maxiters
         for i=1:m
-            #xs[:,i] = proxs[i](z - ys[:,i])
-            xs[i].s = z - ys[i]
+            xs[i][:] = z - ys[i]
             proxs[i](xs[i])
         end
 
-        zprev, z.s = z, mean(xs)+mean(ys)
+        zprev[:] = z
+        z[:] = mean(xs)+mean(ys)
 
         # termination checks
-        eps_pri  = sqrtn*params.ABSTOL + params.RELTOL*max(norm(mean(xs)), norm(z));
-        eps_dual = sqrtn*params.ABSTOL + params.RELTOL*norm(rho*mean(ys));
+        eps_pri  = sqrtn*params.ABSTOL + params.RELTOL*max(sum([norm(x) for x in xs]), norm(z));
+        eps_dual = sqrtn*params.ABSTOL + params.RELTOL*rho*sum([norm(y) for y in ys]);
         prires = sum([norm(x-z) for x in xs]);
         duares = rho*norm(z - zprev);
 
@@ -192,7 +198,7 @@ function admm_consensus(proxs, n; z0 = SharedArray(Float64,n), params=Params())
         end
 
         for i=1:m
-            ys[i].s = ys[i] + xs[i] - z
+            ys[i][:] += xs[i] - z
         end 
     end
 

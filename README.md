@@ -18,7 +18,11 @@ of these regression problems can be efficiently computed in parallel.
 To install, just open a Julia prompt and call
 
     Pkg.clone("git@github.com:madeleineudell/ParallelSparseRegression.jl.git")
-	
+
+You'll also need to use a version of IterativeSolvers with support for caching temporary variables,
+
+    Pkg.clone("git@github.com:madeleineudell/IterativeSolvers.jl.git")
+
 # Usage
 
 Before you begin, initialize all the processes you want to participate in multiplying by your matrix.
