@@ -34,6 +34,18 @@ function admm(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
     yx = zeros(m,1);   yz = zeros(m,1);   yt = zeros(m,1);
     zx = zeros(n+m,1); zz = zeros(n+m,1); zt = zeros(n+m,1);
 
+    # check to make sure proxs take only one argument
+    try
+        yx = prox_f(yz - yt)
+    catch
+        prox_f(y) = prox_f(y,rho)
+    end
+    try
+        xx = prox_g(xz - xt)
+    catch
+        prox_g(x) = prox_g(x,rho)
+    end
+
     if AA == nothing && ~issparse(A)
         if m < n
             AA = A*A';
@@ -49,8 +61,8 @@ function admm(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
     end
 
     for iter = 1:1000
-        yx = prox_f(yz - yt, rho);
-        xx = prox_g(xz - xt, rho);
+        yx = prox_f(yz - yt);
+        xx = prox_g(xz - xt);
         zx = [xx;yx];
         zzprev = copy(zz)
 
@@ -161,7 +173,7 @@ function admm_consensus(proxs, n; z0 = SharedArray(Float64,n), params=Params())
 
         zprev, z.s = z, mean(xs)+mean(ys)
 
-        # termination checks --- not great currently
+        # termination checks
         eps_pri  = sqrtn*params.ABSTOL + params.RELTOL*max(norm(mean(xs)), norm(z));
         eps_dual = sqrtn*params.ABSTOL + params.RELTOL*norm(rho*mean(ys));
         prires = sum([norm(x-z) for x in xs]);
