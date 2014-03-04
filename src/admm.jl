@@ -36,6 +36,7 @@ function admm(prox_f!, prox_g!, A, B, c; params=Params())
     end
     x = SharedArray(Float64,(mx,n));   
     z = SharedArray(Float64,(mz,n));   
+    zprev = SharedArray(Float64,(mz,n));   
     y = SharedArray(Float64,(m,n));   
 
     sqrtmn = sqrt(m*n);
@@ -46,11 +47,13 @@ function admm(prox_f!, prox_g!, A, B, c; params=Params())
         @printf("iter :\t%8s\t%8s\t%8s\t%8s\n", "r", "eps_pri", "s", "eps_dual");
     end
 
-    for iter = 1:1000
+    for iter = 1:params.maxiters
         x[:] = c-B*z-y
         prox_f!(x)
-        z[:], zprev = c-A*x-y, z
+        println("x"); println(x)
+        z[:], zprev[:] = c-A*x-y, copy(z)
         prox_g!(z)
+        println("z"); println(z)
 
         # termination checks
         Ax = A*x; Bz = B*z
@@ -73,6 +76,7 @@ function admm(prox_f!, prox_g!, A, B, c; params=Params())
         end
 
         y[:] += prires
+        println("y"); println(y)
     end
 
     return x,z
@@ -88,7 +92,7 @@ function admm(prox_f, prox_g, n; params=Params())
 #
 # here prox_f(u) computes argmin f(x) + rho/2*\|x - u\|_2^2
 #  and prox_g(u) computes argmin g(z) + rho/2*\|z - u\|_2^2 
-    admm(prox_f,prox_g, speye(n), -speye(n), zeros(n))
+    admm(prox_f,prox_g, speye(n), -speye(n), zeros(n), params=params)
 end
 
 function admm_graph_proj(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
