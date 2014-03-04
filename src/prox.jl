@@ -11,6 +11,7 @@ function prox_pos!(z::SharedArray)
     for i=1:length(z)
         z[i] = max(z[i],0)
     end
+    z
 end
 
 ### The make_prox_* arguments close over rho; the user can change rho when creating the proxs, but not at runtime during the ADMM iterations
@@ -44,7 +45,7 @@ end
 # minimize \|Ax - b\|_2^2 + \rho/2 \|x-z\|_2^2
 # as a function of z
 function make_prox_lsq(A,b,rho; memory=:shared)    
-    C = sparse([A, rho*eye(size(A,2))])
+    C = sparse([A, sqrt(rho)*eye(size(A,2))])
     T = Adivtype(A,b)
     m,n = size(C)
     if memory == :shared
@@ -64,8 +65,8 @@ function make_prox_lsq(A,b,rho; memory=:shared)
     d[1:m1] = b
     function my_prox_lsq!(z::SharedArray)
         for i=n
-            d[m1+i] = z[i]
+            d[m1+i] = sqrt(rho)*z[i]
         end
-        lsqr!(z, C, d; temp_vars=temp_vars, maxiter=5)
+        lsqr!(z, C, d; temp_vars=temp_vars, maxiter=20)
     end
 end

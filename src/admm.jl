@@ -11,7 +11,7 @@ Params() = Params(1,false,1e-4,1e-2,1000)
 Params(rho,quiet) = Params(rho,quiet,1e-4,1e-2,1000)
 Params(rho,quiet,maxiters) = Params(rho,quiet,1e-4,1e-2,maxiters)
 
-function admm(prox_f, prox_g, A, B, c; params=Params())
+function admm(prox_f!, prox_g!, A, B, c; params=Params())
 # Generic admm solver in standard form. Solve
 #
 #  minimize   f(x) + g(z)
@@ -26,8 +26,17 @@ function admm(prox_f, prox_g, A, B, c; params=Params())
 
     rho = params.rho;
 
-    m, mx = size(A);   m, mz = size(B);   m,n = size(c)   
-    z = zeros(mz,n);   y = zeros(m,n);   
+    m, mx = size(A);   m, mz = size(B);   s = size(c)   
+    if length(s) == 1
+        # c is a vector
+        n = 1
+    else
+        # c is a matrix
+        m,n = s
+    end
+    x = SharedArray(Float64,(mx,n));   
+    z = SharedArray(Float64,(mz,n));   
+    y = SharedArray(Float64,(m,n));   
 
     sqrtmn = sqrt(m*n);
     sqrtmxn = sqrt(mx*n);
@@ -38,15 +47,17 @@ function admm(prox_f, prox_g, A, B, c; params=Params())
     end
 
     for iter = 1:1000
-        x = prox_f(c-B*z-y)
-        z, zprev = prox_g(c-A*x-y), z
+        x[:] = c-B*z-y
+        prox_f!(x)
+        z[:], zprev = c-A*x-y, z
+        prox_g!(z)
 
         # termination checks
         Ax = A*x; Bz = B*z
         prires = Ax+Bz-c
         eps_pri  = sqrtmn*params.ABSTOL + params.RELTOL*max(norm(Ax),norm(Bz),normc);
         eps_dual = sqrtmxn*params.ABSTOL + params.RELTOL*rho*norm(A'*y);
-        norm_prires = norm(resid);
+        norm_prires = norm(prires);
         norm_duares = rho*norm(A'*(B*(z - zprev)));
 
         if ~params.quiet && (iter == 1 || mod(iter,10) == 0)
@@ -61,10 +72,23 @@ function admm(prox_f, prox_g, A, B, c; params=Params())
             end
         end
 
-        y += resid
+        y[:] += prires
     end
 
     return x,z
+end
+
+function admm(prox_f, prox_g, n; params=Params())
+# admm solver in standard form. Solve
+#
+#  minimize   f(x) + g(z)
+#  subject to x = z
+# 
+# given prox_f, prox_g, and n=length(x). 
+#
+# here prox_f(u) computes argmin f(x) + rho/2*\|x - u\|_2^2
+#  and prox_g(u) computes argmin g(z) + rho/2*\|z - u\|_2^2 
+    admm(prox_f,prox_g, speye(n), -speye(n), zeros(n))
 end
 
 function admm_graph_proj(prox_f, prox_g, A; params=Params(), AA=nothing, F=nothing)
@@ -228,12 +252,15 @@ function admm_consensus(proxs, n; z = nothing, params=Params())
 
     for iter = 1:params.maxiters
         for i=1:m
-            xs[i][:] = z - ys[i]
+            for j=1:n
+                xs[i][j] = z[j] - ys[i][j]
+            end
             proxs[i](xs[i])
         end
-
+        println(xs[1])
         zprev[:] = z
         z[:] = mean(xs)+mean(ys)
+        println(z)
 
         # termination checks
         eps_pri  = sqrtn*params.ABSTOL + params.RELTOL*max(sum([norm(x) for x in xs]), norm(z));
@@ -254,8 +281,11 @@ function admm_consensus(proxs, n; z = nothing, params=Params())
         end
 
         for i=1:m
-            ys[i][:] += xs[i] - z
+            for j=1:n
+                ys[i][j] = ys[i][j] + xs[i][j] - z[j]
+            end
         end 
+        println(ys[2])
     end
 
     return z
